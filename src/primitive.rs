@@ -14,7 +14,7 @@ impl Intersectable for Sphere
 
         let oc = ray.origin() - self.center;
         let a = ray.direction().norm_squared();
-        let b = oc.dot(ray.direction());
+        let b = oc.dot(&ray.direction());
         let c = oc.norm_squared() - self.radius*self.radius;
 
         let discriminant = b*b - a*c;

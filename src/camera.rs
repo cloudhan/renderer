@@ -1,5 +1,3 @@
-use std::unimplemented;
-
 use ray::*;
 use math::*;
 

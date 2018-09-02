@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod ray;
 mod math;
 mod camera;
@@ -16,11 +18,22 @@ use intersect::*;
 extern crate rand;
 use rand::prelude::*;
 
+fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
+    let mut p = Vec3::zeros();
+    loop {
+        p = 2.0 * Vec3::new(rng.gen::<scalar>(), rng.gen::<scalar>(),rng.gen::<scalar>()) - Vec3::new(1.0, 1.0, 1.0);
+        if p.norm_squared() < 1.0 { break; };
+    }
+    return p;
+}
+
 fn color(world: &Vec<Box<Intersectable>>, ray: &Ray) -> Vec3 {
+    let mut rng = thread_rng();
     let mut t = 0.0;
     let mut intersection = Intersection::new_dummy();
-    if world.intersect(&ray, 0.0, 255.0, &mut intersection) {
-        return  0.5 * (intersection.normal() + Vec3::new(1.0, 1.0, 1.0))
+    if world.intersect(&ray, 1e-10, 255.0, &mut intersection) {
+        let target = intersection.point() + intersection.normal() + random_in_unit_sphere(&mut rng);
+        return  0.5 * color(world, &Ray::new(intersection.point(), target - intersection.point()))
     }
     else {
         t = 0.5 * ray.direction().y + 1.0;
@@ -40,6 +53,9 @@ fn main() {
     let height = 200;
     let samples = 50;
 
+    let gamma = 2.2;
+    let coeff = 1.0/gamma;
+
     //camera
     let lower_left = Vec3::new(-2.0, -1.0, -1.0);
     let horizental = Vec3::new(4.0, 0.0, 0.0);
@@ -54,13 +70,16 @@ fn main() {
     writeln!(f, "P3\n{} {}\n255", width, height).unwrap();
     for h in (0..height).rev() {
         for w in 0..width {
-            let mut rgb = Vec3::zeros();
+            let mut rgb01 = Vec3::zeros();
             for _ in 0..samples {
                 let u = (w as scalar + rng.gen::<scalar>())/width as scalar;
                 let v = (h as scalar + rng.gen::<scalar>())/height as scalar;
-                rgb += color(&my_world, &camera.generate_ray(u, v));
+                rgb01 += color(&my_world, &camera.generate_ray(u, v));
             }
-            rgb = 255.99 * (rgb / samples as scalar);
+            rgb01 /= (samples as scalar);
+
+            let mut rgb = Vec3::new(rgb01.x.powf(coeff), rgb01.y.powf(coeff), rgb01.z.powf(coeff));
+            rgb = 255.99 * rgb;
             writeln!(f, "{} {} {}", rgb.x as i32, rgb.y as i32, rgb.z as i32).unwrap();
         }
     }

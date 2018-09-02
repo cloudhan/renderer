@@ -17,15 +17,15 @@ impl Intersection
 
     pub fn new_dummy() -> Intersection {
         Intersection {
-            t: f64::INFINITY,
-            point: Vec3::new(f64::INFINITY,f64::INFINITY,f64::INFINITY),
-            normal: Vec3::new(f64::INFINITY,f64::INFINITY,f64::INFINITY),
+            t: scalar::infinity(),
+            point: Vec3::new(scalar::infinity(),scalar::infinity(),scalar::infinity()),
+            normal: Vec3::new(scalar::infinity(),scalar::infinity(),scalar::infinity()),
         }
     }
 
     pub fn t(&self) -> scalar { self.t }
-    pub fn point(&self) -> &Vec3 { &self.point }
-    pub fn normal(&self) -> &Vec3 { &self.normal }
+    pub fn point(&self) -> Vec3 { self.point }
+    pub fn normal(&self) -> Vec3 { self.normal }
 
     pub fn set_t(&mut self, new_t: scalar) { self.t = new_t; }
     pub fn set_point(&mut self, new_point: Vec3) { self.point = new_point; }
