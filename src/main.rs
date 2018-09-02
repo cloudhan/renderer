@@ -1,55 +1,66 @@
-mod math;
-mod primitive;
 mod ray;
+mod math;
+mod camera;
+mod intersect;
+mod primitive;
 
 use std::fs::File;
 use std::io::prelude::*;
 
+use ray::*;
 use math::*;
+use camera::*;
 use primitive::*;
+use intersect::*;
 
-fn color(world: &Box<Intersectable>, ray: &Ray) -> RGB {
+extern crate rand;
+use rand::prelude::*;
+
+fn color(world: &Vec<Box<Intersectable>>, ray: &Ray) -> Vec3 {
     let mut t = 0.0;
-    if world.intersect(&ray, &mut t) {
-        return RGB::new(1.0, 0.0, 0.0);
+    let mut intersection = Intersection::new_dummy();
+    if world.intersect(&ray, 0.0, 255.0, &mut intersection) {
+        return  0.5 * (intersection.normal() + Vec3::new(1.0, 1.0, 1.0))
     }
-    else{
-        t = 0.5 * ray.direction.y + 1.0;
-        return (1.0-t) * RGB::new(1.0, 1.0, 1.0) + t * RGB::new(0.5, 0.7, 1.0);
+    else {
+        t = 0.5 * ray.direction().y + 1.0;
+        return (1.0-t) * Vec3::new(1.0, 1.0, 1.0) + t * Vec3::new(0.5, 0.7, 1.0);
     }
-
-
-
-
 }
 
-fn world() -> Box<Intersectable> {
-
-    return Box::new(Sphere { center: Point::new(0.0, 0.0, -1.0), radius: 0.5 } );
+fn world() -> Vec<Box<Intersectable>> {
+    let mut w = Vec::<Box<Intersectable>>::new();
+    w.push(Box::new(Sphere { center: Vec3::new(0.0, 0.0, -1.0), radius: 0.5 } ));
+    w.push(Box::new(Sphere { center: Vec3::new(0.0, -100.5, -1.0), radius: 100.0}));
+    return w;
 }
 
 fn main() {
-    let width = 200;
-    let height = 100;
+    let width = 400;
+    let height = 200;
+    let samples = 50;
 
     //camera
-    let lower_left = Point::new(-2.0, -1.0, -1.0);
-    let horizental = Point::new(4.0, 0.0, 0.0);
-    let vertical = Point::new(0.0, 2.0, 0.0);
+    let lower_left = Vec3::new(-2.0, -1.0, -1.0);
+    let horizental = Vec3::new(4.0, 0.0, 0.0);
+    let vertical = Vec3::new(0.0, 2.0, 0.0);
 
     let my_world = world();
+
+    let camera = Camera::new_default();
+    let mut rng = thread_rng();
 
     let mut f = File::create("./output.ppm").unwrap();
     writeln!(f, "P3\n{} {}\n255", width, height).unwrap();
     for h in (0..height).rev() {
         for w in 0..width {
-            let u = w as scalar/width as scalar;
-            let v = h as scalar/height as scalar;
-            let rgb = 255.99 * color(&my_world, &Ray {
-                origin: Point::new(0.0, 0.0, 0.0),
-                direction: (lower_left + u*horizental + v*vertical).normalize()
-            });
-
+            let mut rgb = Vec3::zeros();
+            for _ in 0..samples {
+                let u = (w as scalar + rng.gen::<scalar>())/width as scalar;
+                let v = (h as scalar + rng.gen::<scalar>())/height as scalar;
+                rgb += color(&my_world, &camera.generate_ray(u, v));
+            }
+            rgb = 255.99 * (rgb / samples as scalar);
             writeln!(f, "{} {} {}", rgb.x as i32, rgb.y as i32, rgb.z as i32).unwrap();
         }
     }

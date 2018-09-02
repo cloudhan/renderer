@@ -3,11 +3,11 @@
 extern crate nalgebra as na;
 
 use self::na::*;
+pub use std::f64;
 
 pub type scalar = f64;
-pub type Point = Vector3<scalar>;
-pub type Direction = Vector3<scalar>;
-pub type RGB = Vector3<scalar>;
+pub type Vec3 = Vector3<scalar>;
+
 
 trait ColorAccessor
 {
