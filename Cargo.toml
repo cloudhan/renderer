@@ -1,0 +1,9 @@
+[package]
+name = "renderer"
+version = "0.1.0"
+authors = ["Cloud Han <cloudhan@outlook.com>"]
+
+[dependencies]
+xml-rs = "0.8.0"
+nalgebra = "0.16.0"
+# openexr = "0.6.0"
