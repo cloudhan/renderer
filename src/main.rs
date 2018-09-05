@@ -1,8 +1,12 @@
 #![allow(unused)]
 
+extern crate rand;
+use rand::prelude::*;
+
 mod ray;
 mod math;
 mod camera;
+mod material;
 mod intersect;
 mod primitive;
 
@@ -12,28 +16,26 @@ use std::io::prelude::*;
 use ray::*;
 use math::*;
 use camera::*;
+use material::*;
 use primitive::*;
 use intersect::*;
 
-extern crate rand;
-use rand::prelude::*;
+use std::rc::Rc;
 
-fn random_in_unit_sphere(rng: &mut ThreadRng) -> Vec3 {
-    let mut p = Vec3::zeros();
-    loop {
-        p = 2.0 * Vec3::new(rng.gen::<scalar>(), rng.gen::<scalar>(),rng.gen::<scalar>()) - Vec3::new(1.0, 1.0, 1.0);
-        if p.norm_squared() < 1.0 { break; };
-    }
-    return p;
-}
 
-fn color(world: &Vec<Box<Intersectable>>, ray: &Ray) -> Vec3 {
-    let mut rng = thread_rng();
+fn color(world: &Vec<Box<Intersectable>>, ray: &Ray, depth_remain: i32) -> Vec3 {
     let mut t = 0.0;
     let mut intersection = Intersection::new_dummy();
-    if world.intersect(&ray, 1e-10, 255.0, &mut intersection) {
-        let target = intersection.point() + intersection.normal() + random_in_unit_sphere(&mut rng);
-        return  0.5 * color(world, &Ray::new(intersection.point(), target - intersection.point()))
+    if world.intersect(&ray, 1e-10, 25500.0, &mut intersection) {
+        let mut scattered = Ray::new_dummy();
+        let mut attenuation = Vec3::zeros();
+        
+        if (depth_remain > 0 && intersection.material().unwrap().scatter(ray, &intersection, &mut attenuation, &mut scattered)) {
+            return attenuation.component_mul(&color(world, &scattered, depth_remain-1));
+        }
+        else{
+            return Vec3::zeros();
+        }
     }
     else {
         t = 0.5 * ray.direction().y + 1.0;
@@ -43,8 +45,29 @@ fn color(world: &Vec<Box<Intersectable>>, ray: &Ray) -> Vec3 {
 
 fn world() -> Vec<Box<Intersectable>> {
     let mut w = Vec::<Box<Intersectable>>::new();
-    w.push(Box::new(Sphere { center: Vec3::new(0.0, 0.0, -1.0), radius: 0.5 } ));
-    w.push(Box::new(Sphere { center: Vec3::new(0.0, -100.5, -1.0), radius: 100.0}));
+    w.push(Box::new(Sphere {
+        center: Vec3::new(0.0, 0.0, -1.0),
+        radius: 0.5,
+        material: Rc::new(Lambertian::new(Vec3::new(0.8, 0.3, 0.3))) 
+    } ));
+
+    w.push(Box::new(Sphere {
+        center: Vec3::new(0.0, -100.5, -1.0),
+        radius: 100.0,
+        material: Rc::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)))
+    }));
+
+        w.push(Box::new(Sphere {
+        center: Vec3::new(1.0, 0.0, -1.0),
+        radius: 0.5,
+        material: Rc::new(Metal::new(Vec3::new(0.8, 0.3, 0.3))) 
+    } ));
+
+        w.push(Box::new(Sphere {
+        center: Vec3::new(-1.0, 0.0, -1.0),
+        radius: 0.5,
+        material: Rc::new(Metal::new(Vec3::new(0.8, 0.3, 0.3))) 
+    } ));
     return w;
 }
 
@@ -74,7 +97,7 @@ fn main() {
             for _ in 0..samples {
                 let u = (w as scalar + rng.gen::<scalar>())/width as scalar;
                 let v = (h as scalar + rng.gen::<scalar>())/height as scalar;
-                rgb01 += color(&my_world, &camera.generate_ray(u, v));
+                rgb01 += color(&my_world, &camera.generate_ray(u, v), 10);
             }
             rgb01 /= (samples as scalar);
 

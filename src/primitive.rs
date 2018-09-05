@@ -1,11 +1,16 @@
 use ray::*;
 use math::*;
+use material::*;
 use intersect::*;
+
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub struct Sphere
 {
     pub center: Vec3,
     pub radius: f64,
+    pub material: Rc<Scatter>
 }
 
 impl Intersectable for Sphere
@@ -26,6 +31,7 @@ impl Intersectable for Sphere
                 let p = ray.point_at(temp);
                 intersection.set_point(p);
                 intersection.set_normal((p - self.center)/self.radius);
+                intersection.set_material(Some(self.material.clone()));
                 return true;
             }
             let temp  = (-b + discriminant.sqrt()) / a;
@@ -34,6 +40,7 @@ impl Intersectable for Sphere
                 let p = ray.point_at(temp);
                 intersection.set_point(p);
                 intersection.set_normal((p - self.center)/self.radius);
+                intersection.set_material(Some(self.material.clone()));
                 return true;
             }
             return false;
@@ -55,7 +62,7 @@ impl Intersectable for Vec<Box<Intersectable>>
             if intersectable.intersect(ray, t_min, closest, &mut temp_intersection) {
                 hit = true;
                 closest = temp_intersection.t();
-                *intersection = temp_intersection;
+                *intersection = temp_intersection.clone();
             }
         }
 
