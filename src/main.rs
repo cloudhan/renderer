@@ -48,7 +48,7 @@ fn world() -> Vec<Box<Intersectable>> {
     w.push(Box::new(Sphere {
         center: Vec3::new(0.0, 0.0, -1.0),
         radius: 0.5,
-        material: Rc::new(Lambertian::new(Vec3::new(0.8, 0.3, 0.3))) 
+        material: Rc::new(Lambertian::new(Vec3::new(0.1, 0.2, 0.5))) 
     } ));
 
     w.push(Box::new(Sphere {
@@ -57,16 +57,23 @@ fn world() -> Vec<Box<Intersectable>> {
         material: Rc::new(Lambertian::new(Vec3::new(0.8, 0.8, 0.0)))
     }));
 
-        w.push(Box::new(Sphere {
+    w.push(Box::new(Sphere {
         center: Vec3::new(1.0, 0.0, -1.0),
         radius: 0.5,
-        material: Rc::new(Metal::new(Vec3::new(0.8, 0.3, 0.3))) 
+        material: Rc::new(Metal::new(Vec3::new(0.8, 0.6, 0.2), 1.0)) 
     } ));
 
-        w.push(Box::new(Sphere {
+    w.push(Box::new(Sphere {
         center: Vec3::new(-1.0, 0.0, -1.0),
         radius: 0.5,
-        material: Rc::new(Metal::new(Vec3::new(0.8, 0.3, 0.3))) 
+        material: Rc::new(Dielectric::new(1.5)) 
+    } ));
+
+    
+    w.push(Box::new(Sphere {
+        center: Vec3::new(-1.0, 0.0, -1.0),
+        radius: -0.45,
+        material: Rc::new(Dielectric::new(1.5)) 
     } ));
     return w;
 }
@@ -74,7 +81,7 @@ fn world() -> Vec<Box<Intersectable>> {
 fn main() {
     let width = 400;
     let height = 200;
-    let samples = 50;
+    let samples = 100;
 
     let gamma = 2.2;
     let coeff = 1.0/gamma;
@@ -86,7 +93,17 @@ fn main() {
 
     let my_world = world();
 
-    let camera = Camera::new_default();
+    let cam_position = Vec3::new(3.0, 3.0, 2.0);
+    let lookat = Vec3::new(0.0, 0.0, -1.0);
+
+    let camera = Camera::new(
+        &cam_position, &lookat,
+        &Vec3::new(0.0, 1.0, 0.0),
+        20.0,
+        (width as scalar) / (height as scalar),
+        2.0,
+        (lookat - cam_position).norm(),
+    );
     let mut rng = thread_rng();
 
     let mut f = File::create("./output.ppm").unwrap();
@@ -97,7 +114,7 @@ fn main() {
             for _ in 0..samples {
                 let u = (w as scalar + rng.gen::<scalar>())/width as scalar;
                 let v = (h as scalar + rng.gen::<scalar>())/height as scalar;
-                rgb01 += color(&my_world, &camera.generate_ray(u, v), 10);
+                rgb01 += color(&my_world, &camera.generate_ray(u, v), 20);
             }
             rgb01 /= (samples as scalar);
 

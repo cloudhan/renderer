@@ -6,7 +6,8 @@ extern crate num_traits;
 use self::na::*;
 
 //pub use std::f64;
-pub use self::num_traits::Float;
+pub use self::num_traits::float::Float;
+pub use self::num_traits::float::FloatConst;
 
 #[allow(non_camel_case_types)]
 pub type scalar = f64;
