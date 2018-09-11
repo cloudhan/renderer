@@ -1,74 +1,76 @@
-use ray::*;
-use math::*;
-use material::*;
 use intersect::*;
+use material::*;
+use math::*;
+use ray::*;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
-pub struct Sphere
-{
+pub struct Sphere {
     pub center: Vec3,
     pub radius: f64,
-    pub material: Rc<Scatter>
+    pub material: Rc<Scatter>,
 }
 
-impl Intersectable for Sphere
-{
-    fn intersect(&self, ray: &Ray, t_min: scalar, t_max: scalar, intersection: &mut Intersection) -> bool {
-
+impl Intersectable for Sphere {
+    fn intersect(&self, ray: &Ray, t_min: scalar, t_max: scalar) -> Option<Intersection> {
         let oc = ray.origin() - self.center;
         let a = ray.direction().norm_squared();
         let b = oc.dot(&ray.direction());
-        let c = oc.norm_squared() - self.radius*self.radius;
+        let c = oc.norm_squared() - self.radius * self.radius;
 
-        let discriminant = b*b - a*c;
+        let discriminant = b * b - a * c;
 
-        if(discriminant > 0.0) {
-            let temp  = (-b - discriminant.sqrt()) / a;
+        if (discriminant > 0.0) {
+            let temp = (-b - discriminant.sqrt()) / a;
             if temp < t_max && temp > t_min {
-                intersection.set_t(temp);
                 let p = ray.point_at(temp);
-                intersection.set_point(p);
-                intersection.set_normal((p - self.center)/self.radius);
-                intersection.set_material(Some(self.material.clone()));
-                return true;
+                let mut intersection = Intersection::new_uninitialized();
+                intersection
+                    .set_t(temp)
+                    .set_point(p)
+                    .set_normal((p - self.center) / self.radius)
+                    .set_material(Some(self.material.clone()));
+                return Some(intersection);
             }
-            let temp  = (-b + discriminant.sqrt()) / a;
+            let temp = (-b + discriminant.sqrt()) / a;
             if temp < t_max && temp > t_min {
-                intersection.set_t(temp);
                 let p = ray.point_at(temp);
-                intersection.set_point(p);
-                intersection.set_normal((p - self.center)/self.radius);
-                intersection.set_material(Some(self.material.clone()));
-                return true;
+                let mut intersection = Intersection::new_uninitialized();
+                intersection
+                    .set_t(temp)
+                    .set_point(p)
+                    .set_normal((p - self.center) / self.radius)
+                    .set_material(Some(self.material.clone()));
+                return Some(intersection);
             }
-            return false;
+            return None;
+        } else {
+            return None;
         }
-        else {
-            return false;
-        }
-    
     }
 }
 
-impl Intersectable for Vec<Box<Intersectable>>
-{
-    fn intersect(&self, ray: &Ray, t_min: scalar, t_max: scalar, intersection: &mut Intersection) -> bool {
-        let mut temp_intersection = Intersection::new_dummy();
+impl Intersectable for Vec<Box<Intersectable>> {
+    fn intersect(&self, ray: &Ray, t_min: scalar, t_max: scalar) -> Option<Intersection> {
+        let mut intersection = Intersection::new_uninitialized();
         let mut hit = false;
         let mut closest = t_max;
         for intersectable in self {
-            if intersectable.intersect(ray, t_min, closest, &mut temp_intersection) {
-                hit = true;
-                closest = temp_intersection.t();
-                *intersection = temp_intersection.clone();
+            match intersectable.intersect(ray, t_min, closest) {
+                Some(temp) => {
+                    hit = true;
+                    closest = temp.t();
+                    intersection = temp;
+                }
+                None => continue,
             }
         }
 
-        return hit;
+        if hit {
+            return Some(intersection);
+        } else {
+            return None;
+        }
     }
-
 }
-
-
