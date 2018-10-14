@@ -22,7 +22,7 @@ impl Intersection {
         }
     }
 
-    pub fn new_uninitialized() -> Intersection {
+    pub fn new_uninitialized() -> Self {
         Intersection {
             t: scalar::infinity(),
             point: zero(),
@@ -40,8 +40,8 @@ impl Intersection {
     pub fn normal(&self) -> &Vec3 {
         &self.normal
     }
-    pub fn material(&self) -> Option<Rc<Scatter>> {
-        self.material.clone()
+    pub fn material(&self) -> &Option<Rc<Scatter>> {
+        &self.material
     }
 
     pub fn set_t(&mut self, new_t: scalar) -> &mut Self {

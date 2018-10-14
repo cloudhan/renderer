@@ -13,3 +13,14 @@ pub use self::num_traits::float::FloatConst;
 pub type scalar = f64;
 //pub type Vec3 = Vector3<scalar>;
 pub type Vec3 = Matrix3x1<scalar>;
+
+
+
+/*use openexr::PixelType;
+use openexr::frame_buffer::PixelData;
+unsafe impl PixelData for Vec3 {
+    fn pixel_type() -> PixelType {
+        return PixelType::Float;
+    }
+}
+*/

@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+extern crate openexr;
+
 extern crate rand;
 use rand::prelude::*;
 
@@ -12,6 +14,8 @@ mod ray;
 
 use std::fs::File;
 use std::io::prelude::*;
+
+use openexr::*;
 
 use camera::*;
 use intersect::*;
@@ -29,13 +33,12 @@ fn color(world: &Vec<Box<Intersectable>>, ray: &Ray, depth_remain: i32) -> Vec3 
             let mut scattered = Ray::new_dummy();
             let mut attenuation = Vec3::zeros();
 
-            if (depth_remain > 0
-                && intersection.material().unwrap().scatter(
-                    ray,
-                    &intersection,
-                    &mut attenuation,
-                    &mut scattered,
-                )) {
+            if (depth_remain > 0 && intersection.material().clone().unwrap().scatter(
+                ray,
+                &intersection,
+                &mut attenuation,
+                &mut scattered,
+            )) {
                 return attenuation.component_mul(&color(world, &scattered, depth_remain - 1));
             } else {
                 return Vec3::zeros();
@@ -87,10 +90,6 @@ fn main() {
     let height = 200;
     let samples = 100;
 
-    let gamma = 2.2;
-    let coeff = 1.0 / gamma;
-
-    //camera
     let lower_left = Vec3::new(-2.0, -1.0, -1.0);
     let horizental = Vec3::new(4.0, 0.0, 0.0);
     let vertical = Vec3::new(0.0, 2.0, 0.0);
@@ -111,8 +110,19 @@ fn main() {
     );
     let mut rng = thread_rng();
 
-    let mut f = File::create("./output.ppm").unwrap();
-    writeln!(f, "P3\n{} {}\n255", width, height).unwrap();
+    let mut pixel_data = vec![(0.0f32, 0.0f32, 0.0f32); width * height];
+
+    let mut file = std::fs::File::create("output.exr").unwrap();
+    let mut output_file = ScanlineOutputFile::new(
+        &mut file,
+        Header::new()
+            .set_resolution(width as u32, height as u32)
+            .add_channel("R", PixelType::FLOAT)
+            .add_channel("G", PixelType::FLOAT)
+            .add_channel("B", PixelType::FLOAT),
+    )
+    .unwrap();
+
     for h in (0..height).rev() {
         for w in 0..width {
             let mut rgb01 = Vec3::zeros();
@@ -123,13 +133,11 @@ fn main() {
             }
             rgb01 /= (samples as scalar);
 
-            let mut rgb = Vec3::new(
-                rgb01.x.powf(coeff),
-                rgb01.y.powf(coeff),
-                rgb01.z.powf(coeff),
-            );
-            rgb = 255.99 * rgb;
-            writeln!(f, "{} {} {}", rgb.x as i32, rgb.y as i32, rgb.z as i32).unwrap();
+            pixel_data[(height - h -1) * width + w] = (rgb01.x as f32, rgb01.y as f32, rgb01.z as f32);
         }
     }
+
+    let mut fb = FrameBuffer::new(width as u32, height as u32);
+    fb.insert_channels(&["R", "G", "B"], &pixel_data);
+    output_file.write_pixels(&fb).unwrap();
 }

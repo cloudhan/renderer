@@ -26,7 +26,7 @@ impl Camera {
         aspect_ratio: scalar,
         aperture: scalar,
         focal_dist: scalar,
-    ) -> Camera {
+    ) -> Self {
         let theta = vfov * scalar::PI() / 180.0;
         let half_height = scalar::tan(theta / 2.0);
         let half_width = aspect_ratio * half_height;

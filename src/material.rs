@@ -61,7 +61,7 @@ pub struct Lambertian {
 }
 
 impl Lambertian {
-    pub fn new(albedo: Vec3) -> Lambertian {
+    pub fn new(albedo: Vec3) -> Self {
         Lambertian { albedo: albedo }
     }
 
@@ -94,7 +94,7 @@ pub struct Metal {
 }
 
 impl Metal {
-    pub fn new(albedo: Vec3, fuzz: scalar) -> Metal {
+    pub fn new(albedo: Vec3, fuzz: scalar) -> Self {
         Metal {
             albedo: albedo,
             fuzz: fuzz,
@@ -133,7 +133,7 @@ pub struct Dielectric {
 }
 
 impl Dielectric {
-    pub fn new(ri: scalar) -> Dielectric {
+    pub fn new(ri: scalar) -> Self {
         Dielectric { ref_idx: ri }
     }
 }
@@ -146,14 +146,13 @@ impl Scatter for Dielectric {
         attenuation: &mut Vec3,
         scattered_ray: &mut Ray,
     ) -> bool {
-        fn refract(v: &Vec3, n: &Vec3, ni_over_nt: scalar, refracted: &mut Vec3) -> bool {
+        fn refract(v: &Vec3, n: &Vec3, ni_over_nt: scalar) -> Option<Vec3> {
             let dt = v.dot(n);
             let discriminant = 1.0 - ni_over_nt * ni_over_nt * (1.0 - dt * dt);
             if (discriminant > 0.0) {
-                *refracted = ni_over_nt * (v - n * dt) - n * discriminant.sqrt();
-                return true;
+                return Some(ni_over_nt * (v - n * dt) - n * discriminant.sqrt());
             } else {
-                return false;
+                return None;
             }
         }
 
@@ -163,7 +162,7 @@ impl Scatter for Dielectric {
         let mut ni_over_nt: scalar;
         let mut reflect_prob: scalar;
         let mut cosine: scalar;
-        if (ray.direction().dot(&intersection.normal()) > 0.0) {
+        if ray.direction().dot(&intersection.normal()) > 0.0 {
             outward_normal = -intersection.normal();
             ni_over_nt = self.ref_idx;
             cosine = self.ref_idx * ray.direction().dot(&intersection.normal());
@@ -173,17 +172,16 @@ impl Scatter for Dielectric {
             cosine = -ray.direction().dot(&intersection.normal());
         }
 
-        let mut refracted = Vec3::zeros();
-        if refract(
-            &ray.direction(),
-            &outward_normal,
-            ni_over_nt,
-            &mut refracted,
-        ) {
-            reflect_prob = schlick(cosine, self.ref_idx);
-        } else {
-            reflect_prob = 1.0;
-        }
+        let refracted = match refract(&ray.direction(), &outward_normal, ni_over_nt) {
+            Some(r) => {
+                reflect_prob = schlick(cosine, self.ref_idx);
+                r
+            }
+            None => {
+                reflect_prob = 1.0;
+                zero()
+            }
+        };
 
         // FIXME:
         let mut rng = thread_rng();

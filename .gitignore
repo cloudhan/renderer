@@ -1,4 +1,6 @@
+/.idea
 /target
 **/*.rs.bk
 
-output.ppm
+*.ppm
+*.exr
